@@ -32,7 +32,7 @@ export default function StaffHeader() {
     <header className="border-b bg-white">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link href="/staff/dashboard" className="font-bold text-xl">
-          Project Idea Generator - Staff Portal
+          IdeaForge - Staff Portal
         </Link>
 
         <div className="flex items-center gap-4">

@@ -1,90 +1,83 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
-import { verifyToken } from "./lib/auth"
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { jwtVerify, type JWTPayload } from "jose";
+
+// Secure secret (must be strong and preferably from .env file)
+const JWT_SECRET =
+  process.env.JWT_SECRET || "ad989da5e56528c46ceb00a81378a9f5fd90defd1a4fda7ab39dd1ca1d93ba02";
+
+// Verify JWT token using jose
+async function verifyToken(token: string): Promise<JWTPayload | null> {
+  try {
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
+    return payload;
+  } catch (error) {
+    console.error("Token verification error:", error);
+    return null;
+  }
+}
 
 export async function middleware(request: NextRequest) {
-  const path = request.nextUrl.pathname
+  const path = request.nextUrl.pathname;
 
-  // Define public paths that don't require authentication
+  // Publicly accessible routes
   const isPublicPath =
     path === "/" ||
     path === "/student/login" ||
     path === "/student/register" ||
     path === "/staff/login" ||
-    path === "/staff/register"
+    path === "/staff/register";
 
-  // Get token from cookies
-  const token = request.cookies.get("token")?.value || ""
+  const token = request.cookies.get("token")?.value || "";
 
-  // Check if the path requires authentication
+  console.log("Middleware triggered for path:", path);
+  console.log("Token found:", token);
+
+  // Handle redirection if user is already authenticated and visits public routes
   if (isPublicPath) {
-    // If user is already logged in, redirect to dashboard
     if (token) {
-      try {
-        const decoded = await verifyToken(token)
-
-        if (decoded) {
-          // @ts-ignore
-          const role = decoded.role
-
-          // Redirect to appropriate dashboard
-          if (path.includes("/student") && role === "student") {
-            return NextResponse.redirect(new URL("/student/dashboard", request.url))
-          }
-
-          if (path.includes("/staff") && role === "staff") {
-            return NextResponse.redirect(new URL("/staff/dashboard", request.url))
-          }
+      const decoded = await verifyToken(token);
+      if (decoded && decoded.role) {
+        if (decoded.role === "student") {
+          return NextResponse.redirect(new URL("/student/dashboard", request.url));
+        } else if (decoded.role === "staff") {
+          return NextResponse.redirect(new URL("/staff/dashboard", request.url));
         }
-      } catch (error) {
-        // Invalid token, continue to public path
       }
     }
-    return NextResponse.next()
+    return NextResponse.next(); // Let public users proceed
   }
 
-  // Protected routes
+  // Protect private routes (student or staff dashboards)
   if (!token) {
-    // Redirect to login based on the path
     if (path.startsWith("/student")) {
-      return NextResponse.redirect(new URL("/student/login", request.url))
+      return NextResponse.redirect(new URL("/student/login", request.url));
+    } else if (path.startsWith("/staff")) {
+      return NextResponse.redirect(new URL("/staff/login", request.url));
+    } else {
+      return NextResponse.redirect(new URL("/", request.url));
     }
-
-    if (path.startsWith("/staff")) {
-      return NextResponse.redirect(new URL("/staff/login", request.url))
-    }
-
-    return NextResponse.redirect(new URL("/", request.url))
   }
 
-  try {
-    const decoded = await verifyToken(token)
-
-    if (!decoded) {
-      // Invalid token, redirect to login
-      return NextResponse.redirect(new URL("/", request.url))
-    }
-
-    // @ts-ignore
-    const role = decoded.role
-
-    // Check if user is accessing the correct routes
-    if (path.startsWith("/student") && role !== "student") {
-      return NextResponse.redirect(new URL("/staff/dashboard", request.url))
-    }
-
-    if (path.startsWith("/staff") && role !== "staff") {
-      return NextResponse.redirect(new URL("/student/dashboard", request.url))
-    }
-
-    return NextResponse.next()
-  } catch (error) {
-    // Invalid token, redirect to login
-    return NextResponse.redirect(new URL("/", request.url))
+  const decoded = await verifyToken(token);
+  if (!decoded || !decoded.role) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
+
+  // Role-based access control
+  if (path.startsWith("/student") && decoded.role !== "student") {
+    return NextResponse.redirect(new URL("/student/dashboard", request.url));
+  }
+
+  if (path.startsWith("/staff") && decoded.role !== "staff") {
+    return NextResponse.redirect(new URL("/staff/dashboard", request.url));
+  }
+
+  return NextResponse.next(); // Authenticated and authorized
 }
 
-// See "Matching Paths" below to learn more
+// Paths where this middleware should run
 export const config = {
   matcher: ["/", "/student/:path*", "/staff/:path*"],
-}
+};

@@ -12,8 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import StudentHeader from "@/components/student-header"
-// Remove useToast import
-import { toast, Toaster } from "sonner" // Updated import for sonner
+import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import ReactMarkdown from "react-markdown"
 
@@ -40,43 +39,36 @@ export default function StudentDashboard() {
   const [submittedIdeas, setSubmittedIdeas] = useState<Idea[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Remove useToast destructuring
   const router = useRouter()
 
   useEffect(() => {
     // Fetch submitted ideas
     const fetchIdeas = async () => {
-      try {
-        const response = await fetch("/api/student/ideas")
+  try {
+    const response = await fetch("/api/student/ideas")
 
-        if (response.status === 401) {
-          // Unauthorized, redirect to login
-          router.push("/student/login")
-          return
-        }
-
-        const data = await response.json()
-
-        if (response.ok) {
-          setSubmittedIdeas(data.ideas)
-        } else {
-          // Updated toast for sonner
-          toast.error("Error", {
-            description: data.error || "Failed to fetch ideas",
-          })
-        }
-      } catch (error) {
-        // Updated toast for sonner
-        toast.error("Error", {
-          description: "Failed to fetch ideas",
-        })
-      } finally {
-        setIsLoading(false)
-      }
+    if (response.status === 401) {
+      // Unauthorized, redirect to login
+      router.push("/student/login")
+      return
     }
 
+    const data = await response.json()
+
+    if (response.ok) {
+      setSubmittedIdeas(data.ideas)
+    } else {
+      toast.error(data.error || "Failed to fetch ideas")
+    }
+  } catch (error) {
+    toast.error("Failed to fetch ideas")
+  } finally {
+    setIsLoading(false)
+  }
+}
+
     fetchIdeas()
-  }, [router]) // Removed toast from dependency array
+  }, [router])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -88,118 +80,104 @@ export default function StudentDashboard() {
   }
 
   const handleGenerateIdea = async () => {
-    setIsGenerating(true)
-    try {
-      const response = await fetch("/api/student/generate-idea", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      })
+  setIsGenerating(true)
+  try {
+    const response = await fetch("/api/student/generate-idea", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formData),
+    })
 
-      if (response.status === 401) {
-        // Unauthorized, redirect to login
-        router.push("/student/login")
-        return
-      }
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setGeneratedIdea(data.idea)
-        // Updated toast for sonner
-        toast.success("Idea generated", {
-          description: "Your project idea has been generated successfully.",
-        })
-      } else {
-        // Updated toast for sonner
-        toast.error("Error", {
-          description: data.error || "Failed to generate idea",
-        })
-      }
-    } catch (error) {
-      // Updated toast for sonner
-      toast.error("Error", {
-        description: "Failed to generate idea",
-      })
-    } finally {
-      setIsGenerating(false)
+    if (response.status === 401) {
+      // Unauthorized, redirect to login
+      router.push("/student/login")
+      return
     }
+
+    const data = await response.json()
+
+    if (response.ok) {
+      setGeneratedIdea(data.idea)
+      toast.success("Your project idea has been generated successfully.")
+    } else {
+      toast.error(data.error || "Failed to generate idea")
+    }
+  } catch (error) {
+    toast.error("Failed to generate idea")
+  } finally {
+    setIsGenerating(false)
   }
+}
 
   const handleSubmitIdea = async () => {
-    if (!generatedIdea) return
+  if (!generatedIdea) return
 
-    setIsSubmitting(true)
+  setIsSubmitting(true)
 
-    try {
-      // Extract title and description from the markdown
-      const lines = generatedIdea.split("\n")
-      let title = lines[0].replace(/^#\s+/, "")
+  try {
+    // Extract title and description from the markdown
+    const lines = generatedIdea.split("\n")
+    let title = lines[0].replace(/^#\s+/, "")
 
-      // If no title found, use the first line
-      if (!title || title === lines[0]) {
-        title = lines[0].substring(0, 100)
-      }
-
-      const description = generatedIdea.substring(generatedIdea.indexOf("\n") + 1)
-
-      const response = await fetch("/api/student/submit-idea", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title,
-          description,
-          areasOfInterest: formData.areasOfInterest,
-          domainInterest: formData.domainInterest,
-          languagesKnown: formData.languagesKnown,
-          additionalInfo: formData.additionalInfo,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        // Updated toast for sonner
-        toast.success("Idea submitted", {
-          description: "Your project idea has been submitted for review.",
-        })
-
-        // Add the new idea to the list
-        setSubmittedIdeas((prev) => [data.idea, ...prev])
-
-        // Clear the generated idea and form
-        setGeneratedIdea("")
-        setFormData({
-          areasOfInterest: "",
-          domainInterest: "",
-          languagesKnown: "",
-          additionalInfo: "",
-        })
-      } else {
-        // Updated toast for sonner
-        toast.error("Error", {
-          description: data.error || "Failed to submit idea",
-        })
-      }
-    } catch (error) {
-      // Updated toast for sonner
-      toast.error("Error", {
-        description: "Failed to submit idea",
-      })
-    } finally {
-      setIsSubmitting(false)
+    // If no title found, use the first line
+    if (!title || title === lines[0]) {
+      title = lines[0].substring(0, 100)
     }
+
+    const description = generatedIdea.substring(generatedIdea.indexOf("\n") + 1)
+
+    // Prepare the data
+    const submissionData = {
+      title,
+      description,
+      areasOfInterest: formData.areasOfInterest,
+      domainInterest: formData.domainInterest,
+      languagesKnown: formData.languagesKnown,
+      additionalInfo: formData.additionalInfo,
+    }
+
+    console.log("Submitting idea:", submissionData)
+
+    const response = await fetch("/api/student/submit-idea", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(submissionData),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to submit idea")
+    }
+
+    toast.success("Your project idea has been submitted for review.")
+
+    // Add the new idea to the list
+    setSubmittedIdeas((prev) => [data.idea, ...prev])
+
+    // Clear the generated idea and form
+    setGeneratedIdea("")
+    setFormData({
+      areasOfInterest: "",
+      domainInterest: "",
+      languagesKnown: "",
+      additionalInfo: "",
+    })
+  } catch (error: any) {
+    console.error("Error submitting idea:", error)
+    toast.error(error.message || "Failed to submit idea")
+  } finally {
+    setIsSubmitting(false)
   }
+}
 
   return (
     <div className="min-h-screen bg-gray-50">
       <StudentHeader />
-      {/* Add Toaster component for sonner */}
-      <Toaster />
 
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-6">Student Dashboard</h1>

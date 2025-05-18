@@ -36,7 +36,7 @@ export default function StudentHeader() {
     <header className="border-b bg-white">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link href="/student/dashboard" className="font-bold text-xl">
-          Project Idea Generator
+          IdeaForge - Project Idea Generator
         </Link>
 
         <div className="flex items-center gap-4">

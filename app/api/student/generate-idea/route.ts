@@ -10,6 +10,15 @@ export async function POST(req: NextRequest) {
   try {
     const { areasOfInterest, domainInterest, languagesKnown, additionalInfo } = await req.json()
 
+    // Validate required fields
+    if (!areasOfInterest || !domainInterest || !languagesKnown) {
+      return NextResponse.json(
+        { error: "Areas of interest, domain interest, and programming languages are required" },
+        { status: 400 },
+      )
+    }
+
+    // Generate idea using Gemini
     const idea = await generateProjectIdea({
       areasOfInterest,
       domainInterest,
@@ -20,6 +29,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ idea })
   } catch (error) {
     console.error("Error generating idea:", error)
-    return NextResponse.json({ error: "Failed to generate idea" }, { status: 500 })
+    return NextResponse.json({ error: "Failed to generate idea. Please try again later." }, { status: 500 })
   }
 }
